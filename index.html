@@ -155,6 +155,34 @@
     font-size:13px; font-weight:600; cursor:pointer; transition:all .18s ease;
   }
   .btn-primary:hover{ background:rgba(0,229,199,0.2); box-shadow:0 0 18px rgba(0,229,199,0.3); }
+  .btn-danger{
+    padding:10px 20px; border-radius:9px; border:1px solid rgba(255,107,94,0.5);
+    background:rgba(255,107,94,0.12); color:var(--danger); font-family:'JetBrains Mono', monospace;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all .18s ease;
+  }
+  .btn-danger:hover{ background:rgba(255,107,94,0.2); box-shadow:0 0 18px rgba(255,107,94,0.3); }
+  .confirm-modal{ width:min(380px, 100%); }
+  .confirm-text{ color:var(--text-2); font-size:13.5px; line-height:1.55; margin:0; }
+
+  /* Overlay stacking: confirmOverlay must sit above the login screen
+     (it's used for "reset vault access" from the login screen too),
+     and pinOverlay must sit above the add/edit modal. Without these,
+     dialogs could render invisibly behind other full-screen layers. */
+  #pinOverlay{ z-index:80; }
+  #confirmOverlay{ z-index:220; }
+
+  .pin-modal{ width:min(360px, 100%); text-align:center; }
+  .pin-modal .confirm-text{ text-align:left; margin-bottom:4px; }
+  input.pin-input{
+    text-align:center; letter-spacing:10px; font-size:20px !important;
+    padding:14px 12px !important;
+  }
+  .pin-forgot{
+    display:inline-block; margin-top:16px; font-size:11.5px; color:var(--text-3);
+    font-family:'JetBrains Mono', monospace; cursor:pointer; text-decoration:underline;
+    text-underline-offset:3px; background:none; border:none;
+  }
+  .pin-forgot:hover{ color:var(--text-2); }
 
   .storage-note{
     display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3);
@@ -201,6 +229,46 @@
     box-shadow:0 0 18px rgba(0,229,199,0.15);
   }
   .login-submit:hover{ background:rgba(0,229,199,0.2); box-shadow:0 0 14px rgba(0,229,199,0.5), 0 0 36px rgba(0,229,199,0.25); }
+  .login-reset{
+    display:inline-block; margin-top:16px; font-size:11.5px; color:var(--text-3);
+    font-family:'JetBrains Mono', monospace; cursor:pointer; text-decoration:underline;
+    text-underline-offset:3px; background:none; border:none;
+  }
+  .login-reset:hover{ color:var(--text-2); }
+
+  /* Custom themed dropdown (replaces native <select> popup, which browsers
+     render with OS-default styling that can't be dark-themed) */
+  .custom-select{ position:relative; }
+  .cs-native{ position:absolute; opacity:0; pointer-events:none; width:1px; height:1px; overflow:hidden; }
+  .cs-trigger{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 14px; border-radius:12px; border:1px solid var(--border);
+    background:var(--glass); color:var(--text-1); font-family:'JetBrains Mono', monospace;
+    font-size:13px; cursor:pointer; transition:all .18s ease; text-align:left;
+  }
+  .cs-trigger:hover{ border-color:var(--border-strong); }
+  .custom-select.open .cs-trigger{
+    border-color:rgba(0,229,199,0.5); box-shadow:0 0 0 4px rgba(0,229,199,0.08), 0 0 24px rgba(0,229,199,0.15);
+  }
+  .cs-chevron{ color:var(--text-3); transition:transform .2s ease; flex-shrink:0; }
+  .custom-select.open .cs-chevron{ transform:rotate(180deg); color:var(--accent); }
+  .cs-menu{
+    position:absolute; top:calc(100% + 8px); left:0; right:0; z-index:60;
+    background:#0a0e17; border:1px solid var(--border-strong); border-radius:12px;
+    padding:6px; box-shadow:0 16px 40px rgba(0,0,0,0.5);
+    max-height:260px; overflow-y:auto;
+    opacity:0; visibility:hidden; transform:translateY(-6px);
+    transition:opacity .18s ease, transform .18s ease, visibility .18s ease;
+  }
+  .custom-select.open .cs-menu{ opacity:1; visibility:visible; transform:translateY(0); }
+  .cs-option{
+    padding:10px 12px; border-radius:8px; font-family:'JetBrains Mono', monospace; font-size:13px;
+    color:var(--text-2); cursor:pointer; transition:all .15s ease;
+  }
+  .cs-option:hover{ background:rgba(255,255,255,0.06); color:var(--text-1); }
+  .cs-option.selected{ background:rgba(0,229,199,0.14); color:var(--accent); }
+  .cs-option.selected:hover{ background:rgba(0,229,199,0.2); }
+  .modal .cs-trigger{ padding:11px 12px; }
 </style>
 </head>
 <body>
@@ -211,13 +279,14 @@
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
     <h2>Vault access</h2>
-    <p class="login-sub">Sign in to view your saved accounts.</p>
+    <p class="login-sub" id="loginSub">Sign in to view your saved accounts.</p>
     <label>Username</label>
     <input id="loginUser" type="text" autocomplete="off" placeholder="Username">
     <label>Password</label>
     <input id="loginPass" type="password" autocomplete="off" placeholder="Password">
     <div class="login-error" id="loginError">Incorrect username or password.</div>
     <button class="login-submit" id="loginSubmit">Unlock</button>
+    <button class="login-reset" id="loginReset" type="button">Forgot your password? Reset vault access</button>
   </div>
 </div>
 
@@ -231,15 +300,30 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input id="search" type="text" placeholder="Search by name or username...">
     </div>
-    <select id="filterCat">
-      <option value="">All categories</option>
-      <option value="social">Social</option>
-      <option value="gaming">Gaming</option>
-      <option value="email">Email</option>
-      <option value="finance">Finance</option>
-      <option value="school">School / Work</option>
-      <option value="other">Other</option>
-    </select>
+    <div class="custom-select" id="filterCatSelect">
+      <select id="filterCat" class="cs-native" tabindex="-1" aria-hidden="true">
+        <option value="">All categories</option>
+        <option value="social">Social</option>
+        <option value="gaming">Gaming</option>
+        <option value="email">Email</option>
+        <option value="finance">Finance</option>
+        <option value="school">School / Work</option>
+        <option value="other">Other</option>
+      </select>
+      <button type="button" class="cs-trigger" id="filterCatTrigger">
+        <span class="cs-value">All categories</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cs-chevron"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="cs-menu" id="filterCatMenu">
+        <div class="cs-option selected" data-value="">All categories</div>
+        <div class="cs-option" data-value="social">Social</div>
+        <div class="cs-option" data-value="gaming">Gaming</div>
+        <div class="cs-option" data-value="email">Email</div>
+        <div class="cs-option" data-value="finance">Finance</div>
+        <div class="cs-option" data-value="school">School / Work</div>
+        <div class="cs-option" data-value="other">Other</div>
+      </div>
+    </div>
     <button class="add-btn" id="openAdd">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       Add account
@@ -265,14 +349,28 @@
     <input id="fName" type="text" placeholder="e.g. Gmail, Steam, Discord">
 
     <label>Category</label>
-    <select id="fCat">
-      <option value="social">Social</option>
-      <option value="gaming">Gaming</option>
-      <option value="email">Email</option>
-      <option value="finance">Finance</option>
-      <option value="school">School / Work</option>
-      <option value="other">Other</option>
-    </select>
+    <div class="custom-select" id="fCatSelect">
+      <select id="fCat" class="cs-native" tabindex="-1" aria-hidden="true">
+        <option value="social">Social</option>
+        <option value="gaming">Gaming</option>
+        <option value="email">Email</option>
+        <option value="finance">Finance</option>
+        <option value="school">School / Work</option>
+        <option value="other">Other</option>
+      </select>
+      <button type="button" class="cs-trigger" id="fCatTrigger">
+        <span class="cs-value">Social</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cs-chevron"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="cs-menu" id="fCatMenu">
+        <div class="cs-option selected" data-value="social">Social</div>
+        <div class="cs-option" data-value="gaming">Gaming</div>
+        <div class="cs-option" data-value="email">Email</div>
+        <div class="cs-option" data-value="finance">Finance</div>
+        <div class="cs-option" data-value="school">School / Work</div>
+        <div class="cs-option" data-value="other">Other</div>
+      </div>
+    </div>
 
     <label>Username / email</label>
     <input id="fUser" type="text" placeholder="username or email">
@@ -290,7 +388,338 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal confirm-modal">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p class="confirm-text" id="confirmText"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn-danger" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pinOverlay">
+  <div class="modal pin-modal">
+    <h2 id="pinTitle">Enter PIN</h2>
+    <p class="confirm-text" id="pinSub">Enter your PIN to reveal saved passwords.</p>
+    <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="••••" class="pin-input">
+    <div class="login-error" id="pinError">Incorrect PIN.</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="pinCancel">Cancel</button>
+      <button class="btn-primary" id="pinSubmit">Unlock</button>
+    </div>
+    <button class="pin-forgot" id="pinForgot" type="button">Forgot PIN? Create a new one</button>
+  </div>
+</div>
+</div>
+
 <script>
+  /* ---------------------------------------------------------
+     LOGIN / VAULT-ACCESS GATE
+     Note: this is a local convenience lock, not real encryption.
+     The master password is hashed before storing, but anyone with
+     access to this browser's dev tools can read localStorage
+     directly (including the saved account entries below, which
+     are stored in plain text). Don't rely on this for anything
+     you wouldn't be okay with someone on this device seeing.
+  --------------------------------------------------------- */
+  const AUTH_KEY = 'vault_auth_v1';
+  const loginScreen = document.getElementById('loginScreen');
+  const vaultApp = document.getElementById('vaultApp');
+  const loginUser = document.getElementById('loginUser');
+  const loginPass = document.getElementById('loginPass');
+  const loginError = document.getElementById('loginError');
+  const loginSubmit = document.getElementById('loginSubmit');
+  const loginSub = document.getElementById('loginSub');
+  const loginReset = document.getElementById('loginReset');
+
+  async function sha256(text){
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function getAuth(){
+    try{ return JSON.parse(localStorage.getItem(AUTH_KEY)); }catch(e){ return null; }
+  }
+
+  function refreshLoginCopy(){
+    if(getAuth()){
+      loginSub.textContent = 'Sign in to view your saved accounts.';
+      loginSubmit.textContent = 'Unlock';
+      loginReset.style.display = 'inline-block';
+    } else {
+      loginSub.textContent = 'No vault yet — choose a username and password to create one.';
+      loginSubmit.textContent = 'Create vault';
+      loginReset.style.display = 'none';
+    }
+  }
+
+  function showError(msg){
+    loginError.textContent = msg;
+    loginError.classList.add('show');
+  }
+  function clearError(){ loginError.classList.remove('show'); }
+
+  async function attemptLogin(){
+    const u = loginUser.value.trim();
+    const p = loginPass.value;
+    if(!u || !p){ showError('Please enter a username and password.'); return; }
+
+    const auth = getAuth();
+    const hashed = await sha256(p);
+
+    if(!auth){
+      // first time: these credentials become the vault's login
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ user: u, pass: hashed }));
+      unlockVault();
+      return;
+    }
+
+    if(auth.user === u && auth.pass === hashed){
+      unlockVault();
+    } else {
+      showError('Incorrect username or password.');
+      loginPass.value = '';
+      loginPass.focus();
+    }
+  }
+
+  function unlockVault(){
+    clearError();
+    loginScreen.classList.add('hide');
+    vaultApp.style.display = 'block';
+    loginUser.value = '';
+    loginPass.value = '';
+  }
+
+  loginSubmit.addEventListener('click', attemptLogin);
+  [loginUser, loginPass].forEach(inp=>{
+    inp.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter') attemptLogin();
+      else clearError();
+    });
+  });
+  loginReset.addEventListener('click', ()=>{
+    askConfirm({
+      title: 'Reset vault access?',
+      text: 'This clears the vault username/password so you can set a new one. Your saved accounts will NOT be deleted.',
+      okLabel: 'Reset',
+      danger: true,
+      onConfirm: ()=>{
+        localStorage.removeItem(AUTH_KEY);
+        loginUser.value = ''; loginPass.value = '';
+        clearError();
+        refreshLoginCopy();
+        loginUser.focus();
+      }
+    });
+  });
+
+  refreshLoginCopy();
+  loginUser.focus();
+
+  /* ---------------------------------------------------------
+     THEMED CONFIRM DIALOG
+     Replaces window.confirm(), which browsers/sandboxed previews
+     often block or silently no-op — that's why the delete button
+     could look like it does nothing when clicked.
+  --------------------------------------------------------- */
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmTitleEl = document.getElementById('confirmTitle');
+  const confirmTextEl = document.getElementById('confirmText');
+  const confirmCancelBtn = document.getElementById('confirmCancel');
+  const confirmOkBtn = document.getElementById('confirmOk');
+  let confirmCallback = null;
+
+  function askConfirm({ title, text, okLabel = 'Delete', danger = true, onConfirm }){
+    confirmTitleEl.textContent = title;
+    confirmTextEl.textContent = text;
+    confirmOkBtn.textContent = okLabel;
+    confirmOkBtn.className = danger ? 'btn-danger' : 'btn-primary';
+    confirmCallback = onConfirm;
+    confirmOverlay.classList.add('show');
+  }
+  function closeConfirm(){ confirmOverlay.classList.remove('show'); confirmCallback = null; }
+
+  confirmCancelBtn.addEventListener('click', closeConfirm);
+  confirmOverlay.addEventListener('click', (ev)=>{ if(ev.target===confirmOverlay) closeConfirm(); });
+  confirmOkBtn.addEventListener('click', ()=>{
+    const cb = confirmCallback;
+    closeConfirm();
+    if(cb) cb();
+  });
+
+  /* ---------------------------------------------------------
+     PIN GATE FOR VIEWING PASSWORDS
+     A separate PIN (independent from the vault login above) is
+     required before a saved password can be revealed, copied, or
+     edited. First use sets the PIN; after that it's asked once per
+     session and stays unlocked until the page is reloaded. A
+     "forgot PIN" flow lets you clear and set a new one at any time
+     without needing the old one (this app has no server-side
+     recovery to check it against anyway).
+  --------------------------------------------------------- */
+  const PIN_KEY = 'vault_pin_v1';
+  let pinUnlockedThisSession = false;
+  let pinPendingAction = null;
+
+  const pinOverlay = document.getElementById('pinOverlay');
+  const pinTitleEl = document.getElementById('pinTitle');
+  const pinSubEl = document.getElementById('pinSub');
+  const pinInput = document.getElementById('pinInput');
+  const pinError = document.getElementById('pinError');
+  const pinSubmitBtn = document.getElementById('pinSubmit');
+  const pinCancelBtn = document.getElementById('pinCancel');
+  const pinForgotBtn = document.getElementById('pinForgot');
+
+  function getPin(){
+    try{ return JSON.parse(localStorage.getItem(PIN_KEY)); }catch(e){ return null; }
+  }
+
+  function showPinError(msg){
+    pinError.textContent = msg;
+    pinError.classList.add('show');
+  }
+  function clearPinError(){ pinError.classList.remove('show'); }
+
+  function requirePin(action){
+    if(pinUnlockedThisSession){ action(); return; }
+    pinPendingAction = action;
+    pinInput.value = '';
+    clearPinError();
+    const hasPin = !!getPin();
+    pinTitleEl.textContent = hasPin ? 'Enter PIN' : 'Create a PIN';
+    pinSubEl.textContent = hasPin
+      ? 'Enter your PIN to reveal, copy, or edit this password.'
+      : 'Set a PIN to protect your saved passwords. You\'ll be asked for it once per visit.';
+    pinSubmitBtn.textContent = hasPin ? 'Unlock' : 'Set PIN';
+    pinForgotBtn.style.display = hasPin ? 'inline-block' : 'none';
+    pinOverlay.classList.add('show');
+    setTimeout(()=>pinInput.focus(), 50);
+  }
+  function closePinPrompt(){ pinOverlay.classList.remove('show'); pinPendingAction = null; }
+
+  async function submitPin(){
+    const val = pinInput.value.trim();
+    if(!val){ showPinError('Please enter a PIN.'); return; }
+
+    const stored = getPin();
+    if(!stored){
+      if(val.length < 4){ showPinError('Use at least 4 digits.'); return; }
+      const hashed = await sha256(val);
+      localStorage.setItem(PIN_KEY, JSON.stringify({ pin: hashed }));
+      finishPinUnlock();
+      return;
+    }
+
+    const hashed = await sha256(val);
+    if(hashed === stored.pin){
+      finishPinUnlock();
+    } else {
+      showPinError('Incorrect PIN.');
+      pinInput.value = '';
+      pinInput.focus();
+    }
+  }
+
+  function finishPinUnlock(){
+    pinUnlockedThisSession = true;
+    const action = pinPendingAction;
+    closePinPrompt();
+    if(action) action();
+  }
+
+  pinSubmitBtn.addEventListener('click', submitPin);
+  pinInput.addEventListener('input', ()=>{
+    pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 8);
+  });
+  pinInput.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter') submitPin();
+    else clearPinError();
+  });
+  pinCancelBtn.addEventListener('click', closePinPrompt);
+  pinOverlay.addEventListener('click', (ev)=>{ if(ev.target===pinOverlay) closePinPrompt(); });
+  pinForgotBtn.addEventListener('click', ()=>{
+    const action = pinPendingAction;
+    askConfirm({
+      title: 'Create a new PIN?',
+      text: 'This clears your current PIN. Your saved accounts are not affected — you\'ll set a fresh PIN right after.',
+      okLabel: 'Reset PIN',
+      danger: true,
+      onConfirm: ()=>{
+        localStorage.removeItem(PIN_KEY);
+        pinPendingAction = action;
+        requirePin(action);
+      }
+    });
+  });
+
+  /* ---------------------------------------------------------
+     CUSTOM DROPDOWNS
+     Native <select> popups render with OS-default styling that
+     CSS can't theme, so these swap in a themed div-based menu
+     while keeping the original <select> in the DOM (hidden) so
+     the rest of the app can keep reading/writing .value as before.
+  --------------------------------------------------------- */
+  function setupCustomSelect({ wrapId, nativeId, triggerId, menuId }){
+    const wrap = document.getElementById(wrapId);
+    const native = document.getElementById(nativeId);
+    const trigger = document.getElementById(triggerId);
+    const valueSpan = trigger.querySelector('.cs-value');
+    const menu = document.getElementById(menuId);
+    const options = Array.from(menu.querySelectorAll('.cs-option'));
+
+    function close(){ wrap.classList.remove('open'); }
+    function open(){
+      document.querySelectorAll('.custom-select.open').forEach(w=>{ if(w!==wrap) w.classList.remove('open'); });
+      wrap.classList.add('open');
+    }
+
+    function selectValue(val, fireChange){
+      native.value = val;
+      const opt = options.find(o=>o.dataset.value === val);
+      valueSpan.textContent = opt ? opt.textContent : '';
+      options.forEach(o=> o.classList.toggle('selected', o.dataset.value === val));
+      if(fireChange) native.dispatchEvent(new Event('change'));
+    }
+
+    trigger.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      wrap.classList.contains('open') ? close() : open();
+    });
+    options.forEach(opt=>{
+      opt.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        selectValue(opt.dataset.value, true);
+        close();
+      });
+    });
+
+    wrap._syncDisplay = () => selectValue(native.value, false);
+    return wrap;
+  }
+
+  document.addEventListener('click', (ev)=>{
+    if(!ev.target.closest('.custom-select')){
+      document.querySelectorAll('.custom-select.open').forEach(w=>w.classList.remove('open'));
+    }
+  });
+  document.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Escape'){
+      document.querySelectorAll('.custom-select.open').forEach(w=>w.classList.remove('open'));
+      closeConfirm();
+      closePinPrompt();
+    }
+  });
+
+  const filterCatSelect = setupCustomSelect({ wrapId:'filterCatSelect', nativeId:'filterCat', triggerId:'filterCatTrigger', menuId:'filterCatMenu' });
+  const fCatSelect = setupCustomSelect({ wrapId:'fCatSelect', nativeId:'fCat', triggerId:'fCatTrigger', menuId:'fCatMenu' });
+
+  /* ---------------------------------------------------------
+     VAULT ENTRIES (unchanged app logic)
+  --------------------------------------------------------- */
   const STORAGE_KEY = 'vault_entries_v1';
   const catColors = { social:'#61dafb', gaming:'#7ed957', email:'#ffd54f', finance:'#ff6b5e', school:'#b39ddb', other:'#9aa4b8' };
   const catLabels = { social:'Social', gaming:'Gaming', email:'Email', finance:'Finance', school:'School / Work', other:'Other' };
@@ -369,8 +798,10 @@
         const entry = entries.find(x=>x.id===id);
         const isMasked = valEl.classList.contains('masked');
         if(isMasked){
-          valEl.textContent = entry.pass || '';
-          valEl.classList.remove('masked');
+          requirePin(()=>{
+            valEl.textContent = entry.pass || '';
+            valEl.classList.remove('masked');
+          });
         } else {
           valEl.textContent = '•'.repeat(Math.min((entry.pass||'').length,14) || 6);
           valEl.classList.add('masked');
@@ -382,18 +813,25 @@
       el.title = 'Click to copy';
       el.addEventListener('click', ()=>{
         const entry = entries.find(x=>x.id===el.dataset.id);
-        copyText(entry.pass||'', el);
+        requirePin(()=> copyText(entry.pass||'', el));
       });
     });
     grid.querySelectorAll('.edit-entry').forEach(btn=>{
-      btn.addEventListener('click', ()=> openModal(btn.dataset.id));
+      btn.addEventListener('click', ()=> requirePin(()=> openModal(btn.dataset.id)));
     });
     grid.querySelectorAll('.delete-entry').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        if(confirm('Delete this account entry?')){
-          entries = entries.filter(x=>x.id!==btn.dataset.id);
-          save(); render();
-        }
+        const entry = entries.find(x=>x.id===btn.dataset.id);
+        askConfirm({
+          title: 'Delete this account?',
+          text: `This will permanently remove "${entry ? entry.name : 'this entry'}" from your vault.`,
+          okLabel: 'Delete',
+          danger: true,
+          onConfirm: ()=>{
+            entries = entries.filter(x=>x.id!==btn.dataset.id);
+            save(); render();
+          }
+        });
       });
     });
   }
@@ -441,6 +879,7 @@
       document.getElementById('fPass').value = '';
       document.getElementById('fNote').value = '';
     }
+    fCatSelect._syncDisplay();
     overlay.classList.add('show');
   }
   function closeModal(){ overlay.classList.remove('show'); editingId = null; }
