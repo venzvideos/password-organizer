@@ -84,8 +84,6 @@
   .sidebar-open-btn.show{ display:flex; }
   .sidebar-open-btn:hover{ color:var(--accent); border-color:rgba(0,229,199,0.5); box-shadow:0 0 14px rgba(0,229,199,0.2); }
 
-  .about-panel{ display:none; }
-
   /* Info overlay popups (About / User) */
   .info-overlay{
     position:fixed; inset:0; z-index:60; display:none; align-items:flex-start; justify-content:center;
@@ -751,9 +749,8 @@
   }
   function escapeAttr(str){ return String(str).replace(/"/g,'&quot;'); }
 
-  // PIN gate for revealing passwords
-  const PIN_STORAGE_KEY = 'vault_pin';
-  let VAULT_PIN = localStorage.getItem(PIN_STORAGE_KEY) || '1234';
+  // PIN gate for revealing passwords (each profile has its own PIN)
+  let VAULT_PIN = localStorage.getItem(pinKeyFor(activeProfile)) || '1234';
   const pinOverlay = document.getElementById('pinOverlay');
   const pinInput = document.getElementById('pinInput');
   const pinError = document.getElementById('pinError');
@@ -821,7 +818,7 @@
       return;
     }
     VAULT_PIN = resetNewPin.value;
-    localStorage.setItem(PIN_STORAGE_KEY, VAULT_PIN);
+    localStorage.setItem(pinKeyFor(activeProfile), VAULT_PIN);
     resetPinOverlay.classList.remove('show');
   }
   resetPinSubmit.addEventListener('click', submitResetPin);
@@ -912,6 +909,129 @@
   sidebarOpenBtn.addEventListener('click', ()=>{
     vsidebar.classList.remove('collapsed');
     sidebarOpenBtn.classList.remove('show');
+  });
+
+  // About / User popups
+  const navAbout = document.getElementById('navAbout');
+  const navUser = document.getElementById('navUser');
+  const aboutOverlay = document.getElementById('aboutOverlay');
+  const userOverlay = document.getElementById('userOverlay');
+
+  function openOverlay(overlayEl, navEl){
+    document.querySelectorAll('.info-overlay').forEach(o=>o.classList.remove('show'));
+    document.querySelectorAll('.vnav-item').forEach(n=>n.classList.remove('active'));
+    overlayEl.classList.add('show');
+    if(navEl) navEl.classList.add('active');
+  }
+  function closeOverlay(overlayEl, navEl){
+    overlayEl.classList.remove('show');
+    if(navEl) navEl.classList.remove('active');
+  }
+
+  navAbout.addEventListener('click', ()=> openOverlay(aboutOverlay, navAbout));
+  navUser.addEventListener('click', ()=>{
+    openOverlay(userOverlay, navUser);
+    renderProfilePanel();
+  });
+
+  document.querySelectorAll('.info-close').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const overlayEl = document.getElementById(btn.dataset.close);
+      const navEl = overlayEl === aboutOverlay ? navAbout : navUser;
+      closeOverlay(overlayEl, navEl);
+    });
+  });
+  document.querySelectorAll('.info-overlay').forEach(overlay=>{
+    overlay.addEventListener('click', (ev)=>{
+      if(ev.target === overlay){
+        const navEl = overlay === aboutOverlay ? navAbout : navUser;
+        closeOverlay(overlay, navEl);
+      }
+    });
+  });
+
+  // Profile switching
+  function initials(name){
+    return (name||'?').trim().slice(0,1).toUpperCase() || '?';
+  }
+
+  function renderProfilePanel(){
+    const profiles = getProfiles();
+    document.getElementById('profileCurrentName').textContent = activeProfile;
+    document.getElementById('profileCurrentAvatar').textContent = initials(activeProfile);
+
+    const listEl = document.getElementById('profileList');
+    listEl.innerHTML = '';
+    profiles.forEach(name=>{
+      const row = document.createElement('div');
+      row.className = 'profile-row' + (name === activeProfile ? ' active' : '');
+      row.innerHTML = `
+        <div class="avatar">${initials(name)}</div>
+        <div class="pname">${escapeHtml(name)}</div>
+        ${profiles.length > 1 ? `<button class="pdelete" title="Delete profile" data-profile="${escapeAttr(name)}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+        </button>` : ''}
+      `;
+      row.addEventListener('click', (ev)=>{
+        if(ev.target.closest('.pdelete')) return;
+        if(name !== activeProfile) switchProfile(name);
+      });
+      const delBtn = row.querySelector('.pdelete');
+      if(delBtn){
+        delBtn.addEventListener('click', (ev)=>{
+          ev.stopPropagation();
+          requestConfirm(`Delete profile "${name}" and all its saved accounts? This cannot be undone.`, ()=>{
+            deleteProfile(name);
+          });
+        });
+      }
+      listEl.appendChild(row);
+    });
+  }
+
+  function switchProfile(name){
+    activeProfile = name;
+    setActiveProfileStorage(name);
+    loadEntries();
+    VAULT_PIN = localStorage.getItem(pinKeyFor(activeProfile)) || '1234';
+    render();
+    renderProfilePanel();
+  }
+
+  function createProfile(rawName){
+    const name = rawName.trim();
+    if(!name) return;
+    const profiles = getProfiles();
+    if(profiles.includes(name)){
+      switchProfile(name);
+      document.getElementById('newProfileInput').value = '';
+      return;
+    }
+    profiles.push(name);
+    saveProfiles(profiles);
+    document.getElementById('newProfileInput').value = '';
+    switchProfile(name);
+  }
+
+  function deleteProfile(name){
+    let profiles = getProfiles();
+    profiles = profiles.filter(p=>p!==name);
+    if(!profiles.length) profiles = ['Main'];
+    saveProfiles(profiles);
+    localStorage.removeItem(entriesKeyFor(name));
+    localStorage.removeItem(pinKeyFor(name));
+    if(activeProfile === name){
+      switchProfile(profiles[0]);
+    } else {
+      renderProfilePanel();
+    }
+  }
+
+  document.getElementById('createProfileBtn').addEventListener('click', ()=>{
+    createProfile(document.getElementById('newProfileInput').value);
+  });
+  document.getElementById('newProfileInput').addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter') createProfile(ev.target.value);
   });
 
   // Login gate
