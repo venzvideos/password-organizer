@@ -105,6 +105,25 @@
   .sidebar-open-btn.show{ display:flex; }
   .sidebar-open-btn:hover{ color:var(--accent); border-color:rgba(0,229,199,0.5); box-shadow:0 0 14px rgba(0,229,199,0.2); }
 
+  .vsidebar-backdrop{ display:none; position:fixed; inset:0; background:rgba(2,4,9,0.55); z-index:44; }
+
+  /* Below this width, the sidebar becomes an overlay drawer instead of squeezing the page content */
+  @media (max-width: 768px){
+    #vaultApp{ display:block; }
+    .vmain{ width:100%; }
+    .vsidebar{
+      position:fixed; top:0; left:0; z-index:45; height:100vh; width:250px;
+      padding:24px 16px; opacity:1; border-right:1px solid var(--border);
+      transform:translateX(0);
+      transition:transform .28s ease;
+    }
+    .vsidebar.collapsed{
+      width:250px; padding:24px 16px; opacity:1; border-right-color:var(--border);
+      transform:translateX(-100%);
+    }
+    .vsidebar-backdrop.show{ display:block; }
+  }
+
   /* Info overlay popups (About / User) */
   .info-overlay{
     position:fixed; inset:0; z-index:60; display:none; align-items:flex-start; justify-content:center;
@@ -514,6 +533,8 @@
     </div>
   </div>
 </nav>
+
+<div class="vsidebar-backdrop" id="vsidebarBackdrop"></div>
 
 <button class="sidebar-open-btn" id="sidebarOpenBtn" title="Open sidebar">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
@@ -1310,16 +1331,24 @@
   const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
   const sidebarOpenBtn = document.getElementById('sidebarOpenBtn');
   const vmainEl = document.querySelector('.vmain');
-  sidebarCollapseBtn.addEventListener('click', ()=>{
+  const vsidebarBackdrop = document.getElementById('vsidebarBackdrop');
+  const isMobileLayout = () => window.matchMedia('(max-width: 768px)').matches;
+
+  function collapseSidebar(){
     vsidebar.classList.add('collapsed');
     sidebarOpenBtn.classList.add('show');
     vmainEl.classList.add('shift-down');
-  });
-  sidebarOpenBtn.addEventListener('click', ()=>{
+    vsidebarBackdrop.classList.remove('show');
+  }
+  function expandSidebar(){
     vsidebar.classList.remove('collapsed');
     sidebarOpenBtn.classList.remove('show');
     vmainEl.classList.remove('shift-down');
-  });
+    vsidebarBackdrop.classList.add('show');
+  }
+  sidebarCollapseBtn.addEventListener('click', collapseSidebar);
+  sidebarOpenBtn.addEventListener('click', expandSidebar);
+  vsidebarBackdrop.addEventListener('click', collapseSidebar);
 
   // About / User popups
   const navAbout = document.getElementById('navAbout');
@@ -1485,9 +1514,11 @@
   const registerSubmit = document.getElementById('registerSubmit');
 
   function ensureSidebarOpen(){
-    vsidebar.classList.remove('collapsed');
-    sidebarOpenBtn.classList.remove('show');
-    vmainEl.classList.remove('shift-down');
+    if(isMobileLayout()){
+      collapseSidebar();
+    } else {
+      expandSidebar();
+    }
   }
 
   function personalizeVaultTitle(){
