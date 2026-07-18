@@ -74,12 +74,14 @@
     font-size:12px; color:var(--text-3); padding:8px 12px; font-style:italic; white-space:nowrap;
   }
 
-  .vmain{ flex:1; padding:44px 24px 100px; min-width:0; }
+  .vmain{ flex:1; padding:44px 24px 100px; min-width:0; transition:padding-top .25s ease; }
+  .vmain.shift-down{ padding-top:88px; }
   .sidebar-open-btn{
     position:fixed; left:16px; top:20px; z-index:20; width:34px; height:34px;
     display:none; align-items:center; justify-content:center;
     background:var(--glass-strong); backdrop-filter:blur(10px); border:1px solid var(--border-strong);
     border-radius:9px; color:var(--text-2); cursor:pointer; transition:all .18s ease;
+    box-shadow:0 4px 16px rgba(0,0,0,0.35);
   }
   .sidebar-open-btn.show{ display:flex; }
   .sidebar-open-btn:hover{ color:var(--accent); border-color:rgba(0,229,199,0.5); box-shadow:0 0 14px rgba(0,229,199,0.2); }
@@ -88,6 +90,7 @@
   .info-overlay{
     position:fixed; inset:0; z-index:60; display:none; align-items:flex-start; justify-content:center;
     background:rgba(2,4,9,0.65); backdrop-filter:blur(4px); padding:80px 20px 20px;
+    overflow-y:auto;
   }
   .info-overlay.show{ display:flex; }
   .info-card{
@@ -164,7 +167,7 @@
   .search-wrap{ position:relative; flex:1; min-width:220px; }
   .search-wrap svg{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-3); }
   #search{
-    width:100%; padding:13px 14px 13px 40px; border-radius:12px;
+    width:100%; padding:13px 40px 13px 40px; border-radius:12px;
     border:1px solid var(--border); background:var(--glass); backdrop-filter:blur(10px);
     color:var(--text-1); font-family:'JetBrains Mono', monospace; font-size:13.5px; outline:none;
     transition:all .2s ease;
@@ -173,6 +176,17 @@
   #search:focus{
     border-color:rgba(0,229,199,0.5);
     box-shadow:0 0 0 4px rgba(0,229,199,0.08), 0 0 24px rgba(0,229,199,0.15);
+  }
+  .search-kbd{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-3);
+    background:var(--glass-strong); border:1px solid var(--border); border-radius:6px;
+    padding:2px 7px; pointer-events:none; transition:opacity .15s ease;
+  }
+  #search:focus ~ .search-kbd, .search-wrap.has-value .search-kbd{ opacity:0; }
+  mark.hl-match{
+    background:rgba(0,229,199,0.28); color:var(--accent); border-radius:3px;
+    padding:0 1px; font-weight:700;
   }
   select#filterCat{
     padding:13px 40px 13px 18px; border-radius:999px; border:1px solid var(--border-strong);
@@ -200,6 +214,26 @@
     background:rgba(0,229,199,0.18); box-shadow:0 0 12px rgba(0,229,199,0.4), 0 0 32px rgba(0,229,199,0.22);
     border-color:rgba(0,229,199,0.7);
   }
+
+  .tag-filter-bar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:-10px 0 20px; }
+  .tag-filter-pill{
+    display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
+    padding:5px 12px; border-radius:20px; cursor:pointer; transition:all .18s ease;
+    color:var(--tag-color); background:color-mix(in srgb, var(--tag-color) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--tag-color) 32%, transparent);
+  }
+  .tag-filter-pill:hover{ background:color-mix(in srgb, var(--tag-color) 20%, transparent); }
+  .tag-filter-pill.active{
+    background:color-mix(in srgb, var(--tag-color) 30%, transparent);
+    border-color:var(--tag-color);
+    box-shadow:0 0 12px color-mix(in srgb, var(--tag-color) 45%, transparent);
+  }
+  .tag-filter-pill .count{ opacity:0.7; font-weight:500; }
+  .tag-filter-clear{
+    font-size:11.5px; color:var(--text-3); cursor:pointer; text-decoration:underline;
+    padding:5px 4px;
+  }
+  .tag-filter-clear:hover{ color:var(--text-1); }
 
   .empty-state{
     text-align:center; padding:70px 20px; color:var(--text-2);
@@ -237,15 +271,28 @@
     border:1px solid color-mix(in srgb, var(--cat-color, var(--accent)) 35%, transparent);
     padding:2px 8px; border-radius:20px;
   }
-  .entry-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .entry-tags{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 0; }
+  .tag-badge{
+    font-size:10.5px; font-weight:600; padding:2px 9px; border-radius:20px;
+    color:var(--tag-color); background:color-mix(in srgb, var(--tag-color) 16%, transparent);
+    border:1px solid color-mix(in srgb, var(--tag-color) 40%, transparent);
+    white-space:nowrap;
+  }
+  .entry-actions{ display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
   .icon-btn{
     width:30px; height:30px; display:flex; align-items:center; justify-content:center;
     background:var(--glass-strong); border:1px solid var(--border); border-radius:8px;
-    color:var(--text-2); cursor:pointer; transition:all .18s ease;
+    color:var(--text-2); cursor:pointer; transition:all .18s ease; position:relative; flex-shrink:0;
   }
   .icon-btn:hover{ color:var(--text-1); border-color:var(--border-strong); }
   .icon-btn.danger:hover{ color:var(--danger); border-color:rgba(255,107,94,0.5); background:rgba(255,107,94,0.1); }
   .icon-btn.copied{ color:#7ed957; border-color:rgba(126,217,87,0.5); box-shadow:0 0 14px rgba(126,217,87,0.35); }
+  .icon-btn.is-disabled{ opacity:0.32; cursor:not-allowed; }
+  .icon-btn.is-disabled:hover{ color:var(--text-2); border-color:var(--border); background:var(--glass-strong); }
+  .icon-btn.fav-btn.is-fav{
+    color:#ffcb47; border-color:rgba(255,203,71,0.5); background:rgba(255,203,71,0.1);
+    box-shadow:0 0 14px rgba(255,203,71,0.3);
+  }
 
   .field-row{
     display:flex; align-items:center; gap:10px; margin-top:12px; font-family:'JetBrains Mono', monospace; font-size:13px;
@@ -254,12 +301,15 @@
   .field-value{ color:var(--text-1); flex:1; word-break:break-all; }
   .field-value.masked{ letter-spacing:2px; }
   .field-value[data-pass]{ cursor:pointer; }
+  .field-value.website-link{ color:var(--accent); text-decoration:none; cursor:pointer; }
+  .field-value.website-link:hover{ text-decoration:underline; }
   .field-note{ margin-top:10px; font-size:12.5px; color:var(--text-2); font-style:italic; }
 
   /* Modal */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(2,4,9,0.7); backdrop-filter:blur(4px);
-    display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+    display:none; align-items:flex-start; justify-content:center; z-index:50; padding:40px 20px;
+    overflow-y:auto;
   }
   .modal-overlay.show{ display:flex; }
   .modal{
@@ -275,6 +325,35 @@
   }
   .modal textarea{ resize:vertical; min-height:50px; font-family:'Sora',sans-serif; }
   .modal select option{ background:#0a0e17; color:var(--text-1); }
+
+  .tag-input-box{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:8px 10px;
+    border-radius:9px; border:1px solid var(--border); background:var(--glass-strong);
+    transition:all .18s ease;
+  }
+  .tag-input-box:focus-within{ border-color:rgba(0,229,199,0.5); box-shadow:0 0 0 3px rgba(0,229,199,0.1); }
+  .tag-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tag-chip{
+    display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600;
+    padding:4px 6px 4px 10px; border-radius:20px;
+    color:var(--tag-color); background:color-mix(in srgb, var(--tag-color) 18%, transparent);
+    border:1px solid color-mix(in srgb, var(--tag-color) 40%, transparent);
+  }
+  .tag-chip .remove-tag{
+    width:15px; height:15px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; cursor:pointer; color:inherit; opacity:0.7;
+  }
+  .tag-chip .remove-tag:hover{ opacity:1; background:rgba(255,255,255,0.15); }
+  #fTagInput{
+    flex:1; min-width:120px; border:none; background:transparent; padding:4px 2px;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--text-1); outline:none;
+  }
+  .tag-suggestions{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .tag-suggestion{
+    font-size:11px; color:var(--text-3); background:var(--glass-strong); border:1px solid var(--border);
+    padding:3px 10px; border-radius:20px; cursor:pointer; transition:all .15s ease;
+  }
+  .tag-suggestion:hover{ color:var(--text-1); border-color:var(--border-strong); }
   .modal input:focus, .modal select:focus, .modal textarea:focus{
     border-color:rgba(0,229,199,0.5); box-shadow:0 0 0 3px rgba(0,229,199,0.1);
   }
@@ -427,9 +506,10 @@
   <p class="subtitle">Saved accounts, organized by category — stored only in this browser.</p>
 
   <div class="toolbar">
-    <div class="search-wrap">
+    <div class="search-wrap" id="searchWrap">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="search" type="text" placeholder="Search by name or username...">
+      <input id="search" type="text" placeholder="Search by website, username, or category...">
+      <kbd class="search-kbd" id="searchKbd">/</kbd>
     </div>
     <select id="filterCat">
       <option value="">All categories</option>
@@ -446,10 +526,12 @@
     </button>
   </div>
 
+  <div class="tag-filter-bar" id="tagFilterBar"></div>
+
   <div id="grid" class="grid"></div>
   <div id="emptyState" class="empty-state" style="display:none;">
-    <div class="big">No accounts saved yet</div>
-    <div>Click "Add account" to save your first one.</div>
+    <div class="big" id="emptyStateTitle">No accounts saved yet</div>
+    <div id="emptyStateSub">Click "Add account" to save your first one.</div>
   </div>
 
   <div class="storage-note">
@@ -476,11 +558,24 @@
       <option value="other">Other</option>
     </select>
 
-    <label>Username / email</label>
-    <input id="fUser" type="text" placeholder="username or email">
+    <label>Username</label>
+    <input id="fUser" type="text" placeholder="username">
+
+    <label>Email (optional)</label>
+    <input id="fEmail" type="text" placeholder="email@example.com">
 
     <label>Password / PIN</label>
     <input id="fPass" type="text" placeholder="password">
+
+    <label>Website URL (optional)</label>
+    <input id="fWebsite" type="text" placeholder="https://example.com">
+
+    <label>Tags (optional)</label>
+    <div class="tag-input-box" id="tagInputBox">
+      <div class="tag-chips" id="tagChips"></div>
+      <input id="fTagInput" type="text" placeholder="Type a tag and press Enter...">
+    </div>
+    <div class="tag-suggestions" id="tagSuggestions"></div>
 
     <label>Notes (optional)</label>
     <textarea id="fNote" placeholder="e.g. backup email, banned, 2FA info..."></textarea>
@@ -575,6 +670,14 @@
   const catColors = { social:'#61dafb', gaming:'#7ed957', email:'#ffd54f', finance:'#ff6b5e', school:'#b39ddb', other:'#9aa4b8' };
   const catLabels = { social:'Social', gaming:'Gaming', email:'Email', finance:'Finance', school:'School / Work', other:'Other' };
 
+  const TAG_PALETTE = ['#00e5c7','#61dafb','#7ed957','#ffd54f','#ff6b5e','#b39ddb','#ff8a65','#4fc3f7','#f06292','#a5d6a7','#ffab91','#90caf9'];
+  function getTagColor(tag){
+    let hash = 0;
+    for(let i=0;i<tag.length;i++){ hash = tag.charCodeAt(i) + ((hash<<5)-hash); }
+    return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length];
+  }
+  let activeTagFilters = new Set();
+
   const serviceIcons = [
     { match:['facebook','fb'], color:'#1877f2', svg:`<path d="M13.5 22v-8h2.7l.4-3.1h-3.1V9c0-.9.25-1.5 1.55-1.5H16.7V4.7c-.28-.04-1.25-.12-2.37-.12-2.35 0-3.95 1.43-3.95 4.06V11H7.6v3.1h2.78V22h3.12Z" fill="currentColor"/>` },
     { match:['gmail','google'], color:'#ea4335', svg:`<path d="M4 6h16v12H4Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m4.5 6.5 7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>` },
@@ -628,29 +731,80 @@
     const q = document.getElementById('search').value.trim().toLowerCase();
     const catFilter = document.getElementById('filterCat').value;
 
+    document.getElementById('searchWrap').classList.toggle('has-value', !!q);
+
+    renderTagFilterBar();
+
     const filtered = entries.filter(e=>{
-      const matchesQ = !q || e.name.toLowerCase().includes(q) || (e.user||'').toLowerCase().includes(q);
+      const catLabel = (catLabels[e.cat]||'Other').toLowerCase();
+      const tags = e.tags || [];
+      const matchesQ = !q
+        || e.name.toLowerCase().includes(q)
+        || (e.user||'').toLowerCase().includes(q)
+        || (e.cat||'').toLowerCase().includes(q)
+        || catLabel.includes(q)
+        || tags.some(t=>t.toLowerCase().includes(q));
       const matchesCat = !catFilter || e.cat === catFilter;
-      return matchesQ && matchesCat;
+      const matchesTags = activeTagFilters.size === 0 || tags.some(t=>activeTagFilters.has(t));
+      return matchesQ && matchesCat && matchesTags;
     });
 
     grid.innerHTML = '';
-    empty.style.display = filtered.length ? 'none' : 'block';
+
+    if(!filtered.length){
+      empty.style.display = 'block';
+      if(entries.length === 0){
+        document.getElementById('emptyStateTitle').textContent = 'No accounts saved yet';
+        document.getElementById('emptyStateSub').textContent = 'Click "Add account" to save your first one.';
+      } else {
+        document.getElementById('emptyStateTitle').textContent = 'No results found';
+        document.getElementById('emptyStateSub').textContent = q
+          ? `Nothing matches "${document.getElementById('search').value.trim()}". Try a different term or category.`
+          : (activeTagFilters.size ? 'No accounts match the selected tags.' : 'No accounts match this category filter.');
+      }
+    } else {
+      empty.style.display = 'none';
+    }
+
+    // Favorites float to the top; stable order otherwise
+    filtered.sort((a,b)=> (b.fav?1:0) - (a.fav?1:0));
 
     filtered.forEach(e=>{
       const card = document.createElement('div');
       card.className = 'entry';
       card.style.setProperty('--cat-color', catColors[e.cat] || catColors.other);
       const icon = getServiceIcon(e.name, e.cat);
+      const nameHtml = highlightText(e.name, q);
+      const userHtml = highlightText(e.user || '—', q);
+      const catLabelHtml = highlightText(catLabels[e.cat]||'Other', q);
+      const hasEmail = !!(e.email && e.email.trim());
+      const hasWebsite = !!(e.website && e.website.trim());
+      const emailHtml = hasEmail ? highlightText(e.email, q) : '—';
+      const tags = e.tags || [];
+      const tagsHtml = tags.length
+        ? `<div class="entry-tags">${tags.map(t=>`<span class="tag-badge" style="--tag-color:${getTagColor(t)}">${highlightText(t, q)}</span>`).join('')}</div>`
+        : '';
       card.innerHTML = `
         <div class="entry-head">
-          <div class="entry-name"><span class="service-icon" style="color:${icon.color}">${icon.svg}</span>${escapeHtml(e.name)}<span class="entry-badge">${catLabels[e.cat]||'Other'}</span></div>
+          <div class="entry-name"><span class="service-icon" style="color:${icon.color}">${icon.svg}</span>${nameHtml}<span class="entry-badge">${catLabelHtml}</span></div>
           <div class="entry-actions">
+            <button class="icon-btn fav-btn${e.fav ? ' is-fav' : ''}" title="${e.fav ? 'Unfavorite' : 'Favorite'}" data-id="${e.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="${e.fav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.9 6.2 21l1.1-6.6L2.5 9.9l6.6-.9Z"/></svg>
+            </button>
             <button class="icon-btn copy-user" title="Copy username" data-id="${e.id}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
             </button>
-            <button class="icon-btn toggle-mask" title="Show/hide password" data-id="${e.id}">
+            <button class="icon-btn copy-email${hasEmail ? '' : ' is-disabled'}" title="${hasEmail ? 'Copy email' : 'No email saved'}" data-id="${e.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 6.5 8 6.5 8-6.5"/></svg>
+            </button>
+            <button class="icon-btn toggle-mask" title="Reveal password" data-id="${e.id}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="icon-btn copy-pass" title="Copy password" data-id="${e.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12 19 4M15 8l2 2M18 5l2 2"/></svg>
+            </button>
+            <button class="icon-btn open-website${hasWebsite ? '' : ' is-disabled'}" title="${hasWebsite ? 'Open website' : 'No website saved'}" data-id="${e.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
             </button>
             <button class="icon-btn edit-entry" title="Edit" data-id="${e.id}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -658,12 +812,15 @@
             <button class="icon-btn danger delete-entry" title="Delete" data-id="${e.id}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
             </button>
-            <span class="entry-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            <span class="entry-chevron" title="Expand"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
           </div>
         </div>
+        ${tagsHtml}
         <div class="entry-details"><div>
-          <div class="field-row"><span class="field-label">User</span><span class="field-value">${escapeHtml(e.user || '—')}</span></div>
+          <div class="field-row"><span class="field-label">User</span><span class="field-value">${userHtml}</span></div>
+          <div class="field-row"><span class="field-label">Email</span><span class="field-value">${emailHtml}</span></div>
           <div class="field-row"><span class="field-label">Pass</span><span class="field-value masked" title="Click to reveal (PIN required)" data-pass="${escapeAttr(e.pass||'')}" data-id="${e.id}">${'•'.repeat(Math.min((e.pass||'').length,14) || 6)}</span></div>
+          ${hasWebsite ? `<div class="field-row"><span class="field-label">Site</span><span class="field-value website-link" data-website="${escapeAttr(e.website)}">${escapeHtml(e.website)}</span></div>` : ''}
           ${e.note ? `<div class="field-note">${escapeHtml(e.note)}</div>` : ''}
         </div></div>
       `;
@@ -673,19 +830,84 @@
     // event delegation is used instead (see grid.addEventListener below) — no per-node binding needed
   }
 
+  function renderTagFilterBar(){
+    const bar = document.getElementById('tagFilterBar');
+    const counts = {};
+    entries.forEach(e=>{
+      (e.tags||[]).forEach(t=>{ counts[t] = (counts[t]||0) + 1; });
+    });
+    const allTags = Object.keys(counts).sort((a,b)=>a.localeCompare(b));
+
+    if(!allTags.length){
+      bar.innerHTML = '';
+      bar.style.display = 'none';
+      return;
+    }
+    bar.style.display = 'flex';
+
+    bar.innerHTML = allTags.map(t=>{
+      const active = activeTagFilters.has(t);
+      return `<span class="tag-filter-pill${active ? ' active' : ''}" style="--tag-color:${getTagColor(t)}" data-tag="${escapeAttr(t)}">${escapeHtml(t)} <span class="count">${counts[t]}</span></span>`;
+    }).join('') + (activeTagFilters.size ? `<span class="tag-filter-clear" id="tagFilterClear">Clear tag filters</span>` : '');
+
+    bar.querySelectorAll('.tag-filter-pill').forEach(pill=>{
+      pill.addEventListener('click', ()=>{
+        const tag = pill.dataset.tag;
+        if(activeTagFilters.has(tag)) activeTagFilters.delete(tag);
+        else activeTagFilters.add(tag);
+        render();
+      });
+    });
+    const clearBtn = document.getElementById('tagFilterClear');
+    if(clearBtn){
+      clearBtn.addEventListener('click', ()=>{
+        activeTagFilters.clear();
+        render();
+      });
+    }
+  }
+
   // Single delegated click handler for all card actions (survives re-renders)
   const gridEl = document.getElementById('grid');
   gridEl.addEventListener('click', (ev)=>{
     const head = ev.target.closest('.entry-head');
+    const favBtn = ev.target.closest('.fav-btn');
     const copyBtn = ev.target.closest('.copy-user');
+    const copyEmailBtn = ev.target.closest('.copy-email');
+    const copyPassBtn = ev.target.closest('.copy-pass');
+    const openWebsiteBtn = ev.target.closest('.open-website');
     const toggleBtn = ev.target.closest('.toggle-mask');
     const editBtn = ev.target.closest('.edit-entry');
     const deleteBtn = ev.target.closest('.delete-entry');
     const passVal = ev.target.closest('.field-value[data-pass]');
+    const websiteLink = ev.target.closest('.website-link');
 
+    if(favBtn){
+      const entry = entries.find(x=>x.id===favBtn.dataset.id);
+      entry.fav = !entry.fav;
+      save(); render();
+      return;
+    }
     if(copyBtn){
       const entry = entries.find(x=>x.id===copyBtn.dataset.id);
       copyText(entry.user||'', copyBtn);
+      return;
+    }
+    if(copyEmailBtn){
+      if(copyEmailBtn.classList.contains('is-disabled')) return;
+      const entry = entries.find(x=>x.id===copyEmailBtn.dataset.id);
+      copyText(entry.email||'', copyEmailBtn);
+      return;
+    }
+    if(copyPassBtn){
+      const entry = entries.find(x=>x.id===copyPassBtn.dataset.id);
+      requestPin(()=> copyText(entry.pass||'', copyPassBtn));
+      return;
+    }
+    if(openWebsiteBtn){
+      if(openWebsiteBtn.classList.contains('is-disabled')) return;
+      const entry = entries.find(x=>x.id===openWebsiteBtn.dataset.id);
+      openWebsiteUrl(entry.website);
       return;
     }
     if(toggleBtn){
@@ -712,6 +934,10 @@
       }
       return;
     }
+    if(websiteLink){
+      openWebsiteUrl(websiteLink.dataset.website);
+      return;
+    }
     if(editBtn){ requestPin(()=> openModal(editBtn.dataset.id)); return; }
     if(deleteBtn){
       requestConfirm('Delete this account entry? This cannot be undone.', ()=>{
@@ -724,6 +950,13 @@
       head.closest('.entry').classList.toggle('expanded');
     }
   });
+
+  function openWebsiteUrl(url){
+    if(!url) return;
+    const full = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    window.open(full, '_blank', 'noopener,noreferrer');
+  }
+
 
   function copyText(text, el){
     function done(){
@@ -749,6 +982,14 @@
   }
   function escapeAttr(str){ return String(str).replace(/"/g,'&quot;'); }
 
+  function highlightText(text, query){
+    const safe = escapeHtml(text || '');
+    if(!query) return safe;
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(' + escapedQuery + ')', 'ig');
+    return safe.replace(re, '<mark class="hl-match">$1</mark>');
+  }
+
   // PIN gate for revealing passwords (each profile has its own PIN)
   let VAULT_PIN = localStorage.getItem(pinKeyFor(activeProfile)) || '1234';
   const pinOverlay = document.getElementById('pinOverlay');
@@ -764,6 +1005,7 @@
     pinInput.value = '';
     pinError.classList.remove('show');
     pinOverlay.classList.add('show');
+    pinOverlay.scrollTop = 0;
     setTimeout(()=>pinInput.focus(), 50);
   }
   function submitPin(){
@@ -799,6 +1041,7 @@
     resetUser.value = ''; resetPass.value = ''; resetNewPin.value = ''; resetConfirmPin.value = '';
     resetPinError.classList.remove('show');
     resetPinOverlay.classList.add('show');
+    resetPinOverlay.scrollTop = 0;
     setTimeout(()=>resetUser.focus(), 50);
   });
   function submitResetPin(){
@@ -836,6 +1079,7 @@
     confirmMessage.textContent = message;
     confirmCallback = onConfirm;
     confirmOverlay.classList.add('show');
+    confirmOverlay.scrollTop = 0;
   }
   confirmOk.addEventListener('click', ()=>{
     confirmOverlay.classList.remove('show');
@@ -849,6 +1093,59 @@
 
   // Modal handling
   const overlay = document.getElementById('modalOverlay');
+  const TAG_SUGGESTIONS = ['Work','Important','Personal','Gaming','2FA Enabled'];
+  let modalTags = [];
+
+  function renderTagChips(){
+    const chipsEl = document.getElementById('tagChips');
+    chipsEl.innerHTML = modalTags.map(t=>`
+      <span class="tag-chip" style="--tag-color:${getTagColor(t)}">
+        ${escapeHtml(t)}
+        <span class="remove-tag" data-tag="${escapeAttr(t)}">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </span>
+      </span>
+    `).join('');
+    chipsEl.querySelectorAll('.remove-tag').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        modalTags = modalTags.filter(t=>t!==btn.dataset.tag);
+        renderTagChips();
+        renderTagSuggestions();
+      });
+    });
+  }
+
+  function addModalTag(raw){
+    const t = raw.trim();
+    if(!t) return;
+    if(!modalTags.some(x=>x.toLowerCase()===t.toLowerCase())){
+      modalTags.push(t);
+      renderTagChips();
+      renderTagSuggestions();
+    }
+    document.getElementById('fTagInput').value = '';
+  }
+
+  function renderTagSuggestions(){
+    const box = document.getElementById('tagSuggestions');
+    const remaining = TAG_SUGGESTIONS.filter(s => !modalTags.some(t=>t.toLowerCase()===s.toLowerCase()));
+    box.innerHTML = remaining.map(s=>`<span class="tag-suggestion" data-tag="${escapeAttr(s)}">+ ${escapeHtml(s)}</span>`).join('');
+    box.querySelectorAll('.tag-suggestion').forEach(btn=>{
+      btn.addEventListener('click', ()=> addModalTag(btn.dataset.tag));
+    });
+  }
+
+  document.getElementById('fTagInput').addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter' || ev.key === ','){
+      ev.preventDefault();
+      addModalTag(ev.target.value.replace(/,$/,''));
+    } else if(ev.key === 'Backspace' && !ev.target.value && modalTags.length){
+      modalTags.pop();
+      renderTagChips();
+      renderTagSuggestions();
+    }
+  });
+
   function openModal(id){
     editingId = id || null;
     document.getElementById('modalTitle').textContent = id ? 'Edit account' : 'Add account';
@@ -857,16 +1154,26 @@
       document.getElementById('fName').value = e.name;
       document.getElementById('fCat').value = e.cat;
       document.getElementById('fUser').value = e.user||'';
+      document.getElementById('fEmail').value = e.email||'';
       document.getElementById('fPass').value = e.pass||'';
+      document.getElementById('fWebsite').value = e.website||'';
       document.getElementById('fNote').value = e.note||'';
+      modalTags = [...(e.tags||[])];
     } else {
       document.getElementById('fName').value = '';
       document.getElementById('fCat').value = 'social';
       document.getElementById('fUser').value = '';
+      document.getElementById('fEmail').value = '';
       document.getElementById('fPass').value = '';
+      document.getElementById('fWebsite').value = '';
       document.getElementById('fNote').value = '';
+      modalTags = [];
     }
+    document.getElementById('fTagInput').value = '';
+    renderTagChips();
+    renderTagSuggestions();
     overlay.classList.add('show');
+    overlay.scrollTop = 0;
   }
   function closeModal(){ overlay.classList.remove('show'); editingId = null; }
 
@@ -877,18 +1184,24 @@
   document.getElementById('saveEntry').addEventListener('click', ()=>{
     const name = document.getElementById('fName').value.trim();
     if(!name){ document.getElementById('fName').focus(); return; }
+    if(document.getElementById('fTagInput').value.trim()){
+      addModalTag(document.getElementById('fTagInput').value);
+    }
     const data = {
       name,
       cat: document.getElementById('fCat').value,
       user: document.getElementById('fUser').value.trim(),
+      email: document.getElementById('fEmail').value.trim(),
       pass: document.getElementById('fPass').value,
-      note: document.getElementById('fNote').value.trim()
+      website: document.getElementById('fWebsite').value.trim(),
+      note: document.getElementById('fNote').value.trim(),
+      tags: [...modalTags]
     };
     if(editingId){
       const idx = entries.findIndex(x=>x.id===editingId);
       entries[idx] = { ...entries[idx], ...data };
     } else {
-      entries.push({ id: uid(), ...data });
+      entries.push({ id: uid(), fav:false, ...data });
     }
     save(); render(); closeModal();
   });
@@ -896,19 +1209,46 @@
   document.getElementById('search').addEventListener('input', render);
   document.getElementById('filterCat').addEventListener('change', render);
 
+  // Keyboard shortcuts: "/" or Ctrl/Cmd+K focuses search, Escape clears it
+  const searchInputEl = document.getElementById('search');
+  document.addEventListener('keydown', (ev)=>{
+    const tag = (ev.target.tagName || '').toLowerCase();
+    const typingElsewhere = (tag === 'input' || tag === 'textarea' || tag === 'select') && ev.target !== searchInputEl;
+
+    if(ev.key === '/' && !typingElsewhere && ev.target !== searchInputEl && !ev.ctrlKey && !ev.metaKey){
+      ev.preventDefault();
+      searchInputEl.focus();
+      return;
+    }
+    if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k'){
+      ev.preventDefault();
+      searchInputEl.focus();
+      searchInputEl.select();
+      return;
+    }
+    if(ev.key === 'Escape' && document.activeElement === searchInputEl){
+      searchInputEl.value = '';
+      render();
+      searchInputEl.blur();
+    }
+  });
+
   render();
 
   // Sidebar collapse/expand
   const vsidebar = document.getElementById('vsidebar');
   const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
   const sidebarOpenBtn = document.getElementById('sidebarOpenBtn');
+  const vmainEl = document.querySelector('.vmain');
   sidebarCollapseBtn.addEventListener('click', ()=>{
     vsidebar.classList.add('collapsed');
     sidebarOpenBtn.classList.add('show');
+    vmainEl.classList.add('shift-down');
   });
   sidebarOpenBtn.addEventListener('click', ()=>{
     vsidebar.classList.remove('collapsed');
     sidebarOpenBtn.classList.remove('show');
+    vmainEl.classList.remove('shift-down');
   });
 
   // About / User popups
@@ -921,6 +1261,7 @@
     document.querySelectorAll('.info-overlay').forEach(o=>o.classList.remove('show'));
     document.querySelectorAll('.vnav-item').forEach(n=>n.classList.remove('active'));
     overlayEl.classList.add('show');
+    overlayEl.scrollTop = 0;
     if(navEl) navEl.classList.add('active');
   }
   function closeOverlay(overlayEl, navEl){
@@ -1053,9 +1394,16 @@
       loginScreen.classList.add('hide');
       vaultApp.style.display = 'flex';
       setTimeout(()=>{ loginScreen.style.display = 'none'; }, 450);
+      ensureSidebarOpen();
     } else {
       loginError.classList.add('show');
     }
+  }
+
+  function ensureSidebarOpen(){
+    vsidebar.classList.remove('collapsed');
+    sidebarOpenBtn.classList.remove('show');
+    vmainEl.classList.remove('shift-down');
   }
 
   loginSubmit.addEventListener('click', attemptLogin);
@@ -1065,6 +1413,7 @@
   if(sessionStorage.getItem('vault_unlocked') === '1'){
     loginScreen.style.display = 'none';
     vaultApp.style.display = 'flex';
+    ensureSidebarOpen();
   }
 </script>
 </body>
